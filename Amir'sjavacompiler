@@ -1,0 +1,115 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class SPLLexer {
+    private String input;
+    private int position;
+    private List<Token> tokens;
+
+    public SPLLexer(String input) {
+        this.input = input;
+        this.position = 0;
+        this.tokens = new ArrayList<>();
+    }
+
+    public List<Token> tokenize() {
+        while (position < input.length()) {
+            char currentChar = input.charAt(position);
+            if (Character.isDigit(currentChar)) {
+                tokenizeNumber();
+            } else if (Character.isLetter(currentChar)) {
+                tokenizeIdentifierOrKeyword();
+            } else if (currentChar == '"') {
+                tokenizeStringLiteral();
+            } else if (isOperator(currentChar)) {
+                tokenizeOperator();
+            } else if (currentChar == '(') {
+                addToken(TokenType.LEFT_PAREN);
+                position++;
+            } else if (currentChar == ')') {
+                addToken(TokenType.RIGHT_PAREN);
+                position++;
+            } else if (currentChar == '{') {
+                addToken(TokenType.LEFT_BRACE);
+                position++;
+            } else if (currentChar == '}') {
+                addToken(TokenType.RIGHT_BRACE);
+                position++;
+            } else if (currentChar == ';') {
+                addToken(TokenType.SEMICOLON);
+                position++;
+            } else if (Character.isWhitespace(currentChar)) {
+                position++;
+            } else {
+                throw new RuntimeException("Invalid character: " + currentChar);
+            }
+        }
+
+        addToken(TokenType.EOF);
+        return tokens;
+    }
+
+    private void tokenizeNumber() {
+        int start = position;
+        while (position < input.length() && Character.isDigit(input.charAt(position))) {
+            position++;
+        }
+
+        if (position < input.length() && input.charAt(position) == '.') {
+            position++;
+            while (position < input.length() && Character.isDigit(input.charAt(position))) {
+                position++;
+            }
+            addToken(TokenType.FLOAT_LITERAL, input.substring(start, position));
+        } else {
+            addToken(TokenType.INT_LITERAL, input.substring(start, position));
+        }
+    }
+
+    private void tokenizeIdentifierOrKeyword() {
+        int start = position;
+        while (position < input.length() && (Character.isLetterOrDigit(input.charAt(position)) || input.charAt(position) == '_')) {
+            position++;
+        }
+
+        String text = input.substring(start, position);
+        TokenType type = TokenType.KEYWORD_MAP.getOrDefault(text, TokenType.IDENTIFIER);
+        addToken(type, text);
+    }
+
+    private void tokenizeStringLiteral() {
+        int start = position;
+        position++;
+        while (position < input.length() && input.charAt(position) != '"') {
+            position++;
+        }
+
+        if (position == input.length()) {
+            throw new RuntimeException("Unterminated string literal");
+        }
+
+        position++;
+        addToken(TokenType.STRING_LITERAL, input.substring(start + 1, position - 1));
+    }
+
+    private void tokenizeOperator() {
+        int start = position;
+        position++;
+        if (position < input.length() && isOperator(input.charAt(position))) {
+            position++;
+        }
+        addToken(TokenType.OPERATOR, input.substring(start, position));
+    }
+
+    private boolean isOperator(char c) {
+        return "+-*/%><=".indexOf(c) != -1;
+    }
+
+    private void addToken(TokenType type) {
+        addToken(type, null);
+    }
+
+    private void addToken(TokenType type, String text) {
+        tokens.add(new Token(type, text));
+    }
+}
